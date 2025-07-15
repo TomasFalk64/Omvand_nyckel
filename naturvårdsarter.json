@@ -929,7 +929,7 @@
   },
   {
     "Art": "Mörk kolflarnlav",
-    "Latin": null,
+    "Latin": "Carbonicola myrmecina",
     "Habitat": "Naturbarrskog",
     "Organismgrupp": "Lavar",
     "Rödlista": "NT",
@@ -1769,7 +1769,7 @@
       "boreal"
     ],
     "Indikerar": "Kontinuitet av tallågor i olika nedbrytningsstadier.",
-    "Särdrag": "Mjuk och tunn. Distinkt rödbrun zon mellan närnast veden. Vita porer 3-4 st/mm",
+    "Särdrag": "Mjuk och tunn, 2-10cm bred. Filtad kanzon som blir rödbrun. Köttet har rödbrun zon  närnast veden. Vita porer 3-4 st/mm",
     "Förväxling": [
       "Lateritticka"
     ],
@@ -3360,7 +3360,7 @@
       "boreal"
     ],
     "Indikerar": "Tallnaturskog med kontinuitet at grova talllågor i olika nedbrytningsstadier",
-    "Särdrag": "Resupinat vedlevande, gräddvit ticka med mjuk och korklik konsistens (ej saftig). Porer små runda 3-5st/mm",
+    "Särdrag": "Resupinat vedlevande, gräddvit ticka med mjuk och korklik konsistens (ej saftig). Porer ut till kanten små runda 3-5st/mm. Ibland gröna av grönalg",
     "Förväxling": [
       "Citronticka Kristallticka",
       "Kritporing"
@@ -4604,7 +4604,7 @@
       "boreal"
     ],
     "Indikerar": null,
-    "Särdrag": "Apothecier röda inuti",
+    "Särdrag": "Apothecier röda inuti, 1-3 mm",
     "Förväxling": null,
     "höjd mm": null,
     "bredd mm": null,
@@ -4633,7 +4633,7 @@
     "soral": null,
     "psuedocypheller": null,
     "Pyknid": null,
-    "apotecier": "svart, men röda inuti",
+    "apotecier": "Blankt svarta, men röda inuti, 1-3 mm",
     "spormassa": null,
     "pruina": null,
     "Lober": null,
@@ -4689,7 +4689,7 @@
     "spormassa": null,
     "pruina": null,
     "Lober": null,
-    "bål": null
+    "bål": "Grå vårtig"
   },
   {
     "Art": "Brun nållav",
@@ -5168,7 +5168,7 @@
       "boreal"
     ],
     "Indikerar": null,
-    "Särdrag": null,
+    "Särdrag": "På jord. Mogna kapslar med tillbakarulla hinna endast vid spetsen",
     "Förväxling": null,
     "höjd mm": null,
     "bredd mm": null,
