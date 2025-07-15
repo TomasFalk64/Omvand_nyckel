@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <title>Omvänd Artnyckel Naturvårdsarter</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+
+</head>
+<body>
+    <h1>Omvänd Artnyckel för Naturvårdsarter</h1>
+
+    <div class="filterrad">
+        <div>
+            <label for="plats">Utbredningszon</label><br>
+            <select id="plats">
+                <option value="">Alla zoner</option>
+            </select>
+        </div>
+        <div>
+            <label for="habitat">Habitat</label><br>
+            <select id="habitat">
+                <option value="">Alla habitat</option>
+            </select>
+        </div>
+        <div>
+            <label for="substrat">Substrat art</label><br>
+            <select id="substrat" multiple size="3">
+                <option value="ALLA">Alla substrat</option>
+            </select>
+        </div>
+        <div>
+            <label for="organismgrupp">Organismgrupp</label><br>
+            <select id="organismgrupp">
+                <option value="">Alla grupper</option>
+            </select>
+        </div>
+    </div>
+
+    <label for="artnamn">Vilken art vill du undersöka?</label><br>
+    <div class="sökrad-autocomplete">
+        <input type="text" id="artnamn" placeholder="Ex: knärot" autocomplete="off" oninput="visaFörslag()" onfocus="visaFörslag()">
+    </div>
+    <div id="förslaglista"></div>
+    <div id="resultat"></div>
+
+    <h3>Arter som setts nära andra arter:</h3>
+    <div class="sambandsrad">
+        <textarea id="artsöklista" placeholder="Skriv artnamn, en per rad" rows="5"></textarea>
+        <button onclick="visaSambandsarter()">➤</button>
+        <div id="viktslider-container">
+            <label for="viktslider">Kantvikt:</label>
+            <input type="range" id="viktslider" min="1" max="100" value="50" step="1" oninput="uppdateraViktGräns(this.value)">
+            <span id="viktvärde">50</span>
+        </div>
+    </div>
+    <div id="sambandsresultat"></div>
+    <!-- <div id="grafContainer" style="height: 400px; border: 1px solid #ccc; margin-top: 1rem;"></div> -->
+
+
+    <div id="bild-popup" class="popup-overlay" onclick="stängPopup()">
+        <img id="popup-bild" class="popup-bild" src="" alt="">
+    </div>
+
+    <script>
+        let artdata = [];
+        let samobservationsGraf = {};
+        let observationCounts = {};
+        let aktuellViktGräns = 50;
+
+        Promise.all([
+            fetch("naturvårdsarter.json").then(res => res.json()),
+            fetch("artgraf_namn.json").then(res => res.json()),
+            fetch("observation_counts.json").then(res => res.json())
+        ]).then(([artDataRes, grafRes, countsRes]) => {
+            artdata = artDataRes;
+            samobservationsGraf = grafRes;
+            observationCounts = countsRes;
+            init();  
+        }).catch(error => {
+            console.error("Fel vid inläsning av JSON-filer:", error);
+        });
+
+        function init() {
+            fyllFiltermenyer();
+        }
+
+        function uppdateraViktGräns(nyttVärde) {
+            aktuellViktGräns = parseInt(nyttVärde);
+            document.getElementById("viktvärde").textContent = nyttVärde;
+            visaSambandsarter();  // Rita om grafen med ny gräns
+        }
+
+        function fyllFiltermenyer() {
+            const platsSelect = document.getElementById("plats");
+            const substratSelect = document.getElementById("substrat");
+            const habitatSelect = document.getElementById("habitat");
+            const organismgruppSelect = document.getElementById("organismgrupp");
+
+            const organismgrupper = new Set();
+            const zoner = new Set();
+            const habitattyper = new Set();
+            const substrattyper = new Set();
+
+            artdata.forEach(art => {
+                // Utbredning
+                if (Array.isArray(art.Utbredning)) {
+                    art.Utbredning.forEach(zon => {
+                        if (typeof zon === "string") {
+                            zoner.add(zon.trim());
+                        }
+                    });
+                }
+
+                // Habitat
+                const habitatFält = art.habitat || art.Habitat;
+                if (Array.isArray(habitatFält)) {
+                    habitatFält.forEach(h => {
+                        if (typeof h === "string") {
+                            habitattyper.add(h.trim());
+                        }
+                    });
+                } else if (typeof habitatFält === "string") {
+                    habitattyper.add(habitatFält.trim());
+                }
+
+                // Substrat art
+                const substratFält = art["Substrat art"];
+                if (Array.isArray(substratFält)) {
+                    substratFält.forEach(sub => {
+                        if (typeof sub === "string") {
+                            substrattyper.add(sub.trim());
+                        }
+                    });
+                } else if (typeof substratFält === "string") {
+                    substrattyper.add(substratFält.trim());
+                }
+
+                // Organismgrupp
+                if (typeof art.Organismgrupp === "string") {
+                    organismgrupper.add(art.Organismgrupp.trim());
+                }
+            });
+
+            // Fyll menyer
+            Array.from(zoner).sort((a, b) => a.localeCompare(b, 'sv')).forEach(zon => {
+                platsSelect.appendChild(new Option(zon, zon));
+            });
+
+            Array.from(habitattyper).sort((a, b) => a.localeCompare(b, 'sv')).forEach(hab => {
+                habitatSelect.appendChild(new Option(hab, hab));
+            });
+
+            Array.from(substrattyper).sort((a, b) => a.localeCompare(b, 'sv')).forEach(sub => {
+                substratSelect.appendChild(new Option(sub, sub));
+            });
+
+            Array.from(organismgrupper).sort((a, b) => a.localeCompare(b, 'sv')).forEach(grupp => {
+                organismgruppSelect.appendChild(new Option(grupp, grupp));
+            });
+        }
+
+        function visaArt() {
+            const plats = document.getElementById("plats").value.trim();
+            const namn = document.getElementById("artnamn").value.trim().toLowerCase();
+            const valdHabitat = document.getElementById("habitat").value;
+            const resultatDiv = document.getElementById("resultat");
+            resultatDiv.innerHTML = "";
+
+            if (!namn) {
+                resultatDiv.innerText = "Ange ett artnamn.";
+                return;
+            }
+
+            const art = artdata.find(a => a.Art?.toLowerCase() === namn);
+
+            if (!art) {
+                resultatDiv.innerText = "Arten hittades inte.";
+                return;
+            }
+
+            const count = observationCounts[art.Art];
+
+            // Generera bilder (max 2)
+            let bilderHtml = "";
+            for (let i = 1; i <= 2; i++) {
+                const bildPath = `bilder/${encodeURIComponent(art.Art)}_${i}.jpeg`;
+                bilderHtml += `<img src="${bildPath}" alt="${art.Art}" class="förväxlingsbild"
+                    onclick="visaPopup('${bildPath}', '${art.Art}')" 
+                    onerror="this.style.display='none'">`;
+            }
+
+            let html = `
+                <div class="art-block">
+                    <div class="art-flexbox">
+                        <div class="art-fälten">
+                            <h2>
+                                ${art.Art} <em>${art.Latin || ""}</em> 
+                                <span class="observation-info"># I området 2000–2024: ${count || "0"}</span>
+                            </h2>
+
+                            ${redigerbartFält("Särdrag", "Särdrag", art)}
+                            ${redigerbartFält("Miljö", "miljö", art)}
+                            ${redigerbartFält("Substrat", "substrat", art)}
+                            ${redigerbartFält("Utbredning", "Utbredning", art)}
+                            ${redigerbartFält("Indikerar", "Indikerar", art)}
+                            <div class="spara-knapp-container">
+                                <button class="spara-knapp" onclick="sparaRedigeradJson()">💾</button>
+                            </div>
+                        </div>
+                        <div class="art-bilder-vertikal">
+                            ${bilderHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+
+            if (Array.isArray(art.Förväxling) && art.Förväxling.length > 0) {
+                html += "<h3>Förväxlingsarter:</h3>";
+                art.Förväxling.forEach(namn => {
+                    const namnSanerat = namn.trim().toLowerCase();
+                    const f = artdata.find(a => a.Art?.trim().toLowerCase() === namnSanerat);
+                    if (f) {
+                        const bildPath = `bilder/${f.Art}_1.jpeg`;
+                        html += `
+                            <div class="förväxling">
+                                <div class="förväxling-flex">
+                                    <div class="förväxling-info">
+                                        <h4>${f.Art} <em>${f.Latin || ""}</em></h4>
+                                        <p><strong>Särdrag:</strong> ${f.Särdrag || "saknas"}</p>
+                                        ${f.miljö ? `<p><strong>Miljö:</strong> ${f.miljö}</p>` : ""}
+                                        ${f.substrat ? `<p><strong>Substrat:</strong> ${f.substrat}</p>` : ""}
+                                        ${f.Indikerar ? `<p><strong>Indikerar:</strong> ${f.Indikerar}</p>` : ""}
+                                    </div>
+                                    <div class="förväxling-bild">
+                                        <img src="${bildPath}" alt="${f.Art}" class="förväxlingsbild"
+                                            onclick="visaPopup('${bildPath}', '${f.Art}')" 
+                                            onerror="this.style.display='none'">
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+            }
+
+
+            // Visa samobserverade arter
+            const samobs = samobservationsGraf[art.Art];
+            if (samobs && typeof samobs === "object") {
+                const samobsArter = Object.entries(samobs)
+                    .sort((a, b) => b[1].weight - a[1].weight)
+                    .slice(0, 5); // max 5
+
+                if (samobsArter.length > 0) {
+                    html += `<h3>Samobserverade arter:</h3><ul>`;
+                    samobsArter.forEach(([namn, info]) => {
+                        html += `<li>${namn} <span style="color: #999;">(vikt: ${info.weight})</span></li>`;
+                    });
+                    html += `</ul>`;
+                }
+            }
+
+            if (Array.isArray(art.Förväxling) && art.Förväxling.length > 0) {
+                const förvArter = art.Förväxling
+                    .map(namn => artdata.find(a => a.Art?.trim().toLowerCase() === namn.trim().toLowerCase()))
+                    .filter(Boolean);
+
+                html += "<h3>Jämförelse med förväxlingsarter:</h3>";
+                html += byggJämförelsetabell(art, förvArter);
+            }
+
+            resultatDiv.innerHTML = html;
+        }
+
+        function visaFörslag() {    
+            const input = document.getElementById("artnamn");
+            const lista = document.getElementById("förslaglista");
+            const query = input.value.trim().toLowerCase();
+            const valdOrganismgrupp = document.getElementById("organismgrupp").value;
+            const valdZon = document.getElementById("plats").value;
+            let valdaSubstrat = Array.from(document.getElementById("substrat").selectedOptions)
+                .map(option => option.value);
+            const valdHabitat = document.getElementById("habitat").value;
+
+            if (valdaSubstrat.includes("ALLA")) {
+                valdaSubstrat = [];
+            }
+
+            lista.innerHTML = "";
+            //if (query.length === 0) return;
+
+            const matchande = artdata.filter(art => {
+                // Matchar artnamn?
+                const namnMatch = art.Art?.toLowerCase().startsWith(query);
+                if (!namnMatch) return false;
+
+                // Matchar utbredning?
+                if (valdZon) {
+                    if (!Array.isArray(art.Utbredning) || !art.Utbredning.includes(valdZon)) {
+                        return false;
+                    }
+                }
+
+                if (valdHabitat) {
+                    const artHabitat = art.habitat || art.Habitat;
+                    if (Array.isArray(artHabitat)) {
+                        if (!artHabitat.includes(valdHabitat)) return false;
+                    } else {
+                        if (artHabitat !== valdHabitat) return false;
+                    }
+                }
+
+                if (valdaSubstrat.length > 0) {
+                    const substratArt = art["Substrat art"];
+                    if (!Array.isArray(substratArt)) return false;
+
+                    const harMatchandeSubstrat = valdaSubstrat.some(s => substratArt.includes(s));
+                    if (!harMatchandeSubstrat) return false;
+                }
+
+                if (valdOrganismgrupp && art.Organismgrupp !== valdOrganismgrupp) return false;
+
+                return true;
+            });
+
+            // Visa max 10 förslag
+            matchande.slice(0, 10).forEach(art => {
+                const item = document.createElement("div");
+                item.className = "förslag-item";
+                item.textContent = art.Art;
+                item.onclick = () => {
+                    input.value = art.Art;
+                    lista.innerHTML = "";
+                    visaArt(); 
+                        
+                    const textarea = document.getElementById("artsöklista");
+                    if (textarea && textarea.value.trim() === "") {
+                        textarea.value = art.Art; // Förhandsifyll sambands-textarea
+                    }
+                };
+                lista.appendChild(item);
+            });
+        }
+
+        function visaSambandsarter() {
+            const input = document.getElementById("artsöklista").value.trim();
+            const artnamnLista = input
+                .split(/\n|,/)
+                .map(n => n.trim().toLowerCase())
+                .filter(n => n.length > 0);
+            const resultatDiv = document.getElementById("sambandsresultat");
+            resultatDiv.innerHTML = "";
+            
+
+            if (artnamnLista.length === 0) {
+                resultatDiv.innerText = "Ange minst en art.";
+                return;
+            }
+
+            const grannlistor = artnamnLista.map(namn => {
+                const grannar = samobservationsGraf[namn] || samobservationsGraf[namn.charAt(0).toUpperCase() + namn.slice(1)];
+                if (!grannar) {
+                    resultatDiv.innerText = `Arten "${namn}" finns inte i grafen.`;
+                    throw new Error(`Saknas i grafen: ${namn}`);
+                }
+                return grannar;
+            });
+
+            const gemensammaGrannar = Object.keys(grannlistor[0]).filter(granne => {
+                if (artnamnLista.includes(granne)) return false;
+                return grannlistor.every(g => granne in g);
+            });
+
+            if (gemensammaGrannar.length === 0) {
+                resultatDiv.innerText = "Inga arter är kopplade till alla inmatade arter.";
+                return;
+            }
+
+            const resultat = gemensammaGrannar.map(granne => {
+                const vikter = grannlistor.map(g => g[granne]?.weight ?? 0);
+                const minVikt = Math.min(...vikter);
+                return { namn: granne, vikt: minVikt };
+            });
+
+            resultat.sort((a, b) => b.vikt - a.vikt);
+
+            // 🔹 Skapa wrapper-div för lista + graf
+            const wrapper = document.createElement("div");
+            wrapper.className = "flexcontainer";
+
+            // 🔹 Lista
+            let listaHtml = "<div class='sambandslista'><h4>Gemensamt samobserverade arter:</h4><ul>";
+            resultat.forEach(entry => {
+                listaHtml += `<li>${entry.namn} <span style="color:#999;">(min vikt: ${entry.vikt.toFixed(2)})</span></li>`;
+            });
+            listaHtml += "</ul></div>";
+            wrapper.innerHTML = listaHtml;
+
+            // 🔹 Graf
+            const grafDiv = document.createElement("div");
+            grafDiv.id = "grafContainer";
+            // grafDiv.style.width = "400px";
+            // grafDiv.style.height = "500px";
+            // grafDiv.style.border = "1px solid #ccc";
+            // grafDiv.style.marginLeft = "1rem";
+            wrapper.appendChild(grafDiv);
+
+            // 🔹 Sätt wrapper i resultatDiv
+            resultatDiv.innerHTML = "";
+            resultatDiv.appendChild(wrapper);
+
+            const vikter = resultat.map(r => r.vikt);
+            const minVikt = Math.min(...vikter);
+            const maxVikt = Math.max(...vikter);
+
+            function skalaViktTillLängd(vikt) {
+                const maxLängd = 10;
+                const minLängd = 1;
+                const logVikt = Math.log(vikt + 1); // skyddar mot nollor
+                const logMin = Math.log(minVikt + 1);
+                const logMax = Math.log(maxVikt + 1);
+                const skala = (logVikt - logMin) / (logMax - logMin);
+                return  maxLängd - skala * (maxLängd - minLängd); //300/vikt;
+            }
+
+            const nodLista = [];
+            const kantLista = [];
+
+            const gemensammaGrannarNamn = resultat.map(r => r.namn);
+            const allaNoder = [...new Set([...artnamnLista, ...gemensammaGrannarNamn])];
+
+       
+            allaNoder.forEach(namn => {
+                const namnKorrekt = hittaGrafNamn(namn);
+                if (!namnKorrekt) return;
+
+                nodLista.push({
+                    id: namnKorrekt,
+                    label: namnKorrekt,
+                    color: artnamnLista.includes(namn) ? "#2e7d32" : "#6666cc",
+                    shape: "dot",
+                    size: artnamnLista.includes(namn) ? 20 : 14
+                });
+            });
+
+            const minViktGräns = aktuellViktGräns; 
+
+            for (let i = 0; i < allaNoder.length; i++) {
+                for (let j = i + 1; j < allaNoder.length; j++) {
+                    const a = allaNoder[i];
+                    const b = allaNoder[j];
+                    const vikt = samobservationsGraf[a]?.[b]?.weight || samobservationsGraf[b]?.[a]?.weight;
+
+                    if (vikt && vikt >= minViktGräns) {
+                        kantLista.push({
+                            from: a,
+                            to: b,
+                            value: vikt,
+                            title: `vikt: ${vikt.toFixed(2)}`,
+                            length: 1 //skalaViktTillLängd(vikt)
+                        });
+                    }
+                }
+            }
+
+            function hittaGrafNamn(namn) {
+                return samobservationsGraf[namn]
+                    ? namn
+                    : samobservationsGraf[namn.charAt(0).toUpperCase() + namn.slice(1)]
+                        ? namn.charAt(0).toUpperCase() + namn.slice(1)
+                        : null;
+            }
+
+            // Lägg till starka kopplingar från artnamnLista (gröna noder) även om de är under minViktGräns
+            artnamnLista.forEach(frånOriginal => {
+                const från = hittaGrafNamn(frånOriginal);
+                if (!från) return;
+
+                gemensammaGrannarNamn.forEach(tillOriginal => {
+                    const till = hittaGrafNamn(tillOriginal);
+                    if (!till) return;
+
+                    const vikt = samobservationsGraf[från]?.[till]?.weight ?? samobservationsGraf[till]?.[från]?.weight;
+                    if (vikt) {
+                        kantLista.push({
+                            from: från,
+                            to: till,
+                            value: vikt,
+                            title: `vikt: ${vikt.toFixed(2)}`,
+                            length: skalaViktTillLängd(vikt)
+                        });
+                    }
+                });
+            });
+
+            const networkData = {
+                nodes: new vis.DataSet(nodLista),
+                edges: new vis.DataSet(kantLista)
+            };
+
+            const options = {
+                nodes: {
+                    shape: "dot",
+                    size: 10,
+                    font: { size: 14 }
+                },
+                edges: {
+                    arrows: "to",
+                    color: "#ccc",
+                    smooth: true
+                },
+                    physics: {
+                        enabled: true,
+                        solver: "forceAtlas2Based",  // eller "barnesHut", "repulsion"
+                        stabilization: {
+                            enabled: true,
+                            iterations: 10,     // 👈 Prova 50–200
+                            updateInterval: 10
+                        }
+                    }
+            };
+
+            new vis.Network(grafDiv, networkData, options);
+        }
+
+
+        function byggJämförelsetabell(huvudArt, förväxlingsArter) {
+            const allaArter = [huvudArt, ...förväxlingsArter];
+            const artNamnLista = allaArter.map(a => a.Art);
+            
+            // Hämta alla fält som förekommer i minst en art
+            const fältAttJämföra = Array.from(
+                new Set(
+                    allaArter.flatMap(art => Object.keys(art))
+                )
+            ).filter(f => f !== "Art" && f !== "Latin");  // exkludera namn
+
+            const skillnader = {};
+
+            fältAttJämföra.forEach(fält => {
+                const värden = allaArter.map(a => (a[fält] || "").toString().trim());
+                const allaUnika = new Set(värden);
+                if (allaUnika.size > 1) {
+                    skillnader[fält] = värden;
+                }
+            });
+
+            if (Object.keys(skillnader).length === 0) return "<p>Inga tydliga skillnader i valda fält.</p>";
+
+            let html = "<table class='jämförelsetabell'><thead><tr><th>Fält</th>";
+            artNamnLista.forEach(namn => {
+                html += `<th>${namn}</th>`;
+            });
+            html += "</tr></thead><tbody>";
+
+            for (const [fält, värden] of Object.entries(skillnader)) {
+                html += `<tr><td><strong>${fält}</strong></td>`;
+                värden.forEach(v => {
+                    html += `<td>${v || "-"}</td>`;
+                });
+                html += "</tr>";
+            }
+
+            // Lägg till en rad: antal observationer
+            html += "<tr><td><strong>Observationer</strong></td>";
+            allaArter.forEach(art => {
+                const count = observationCounts[art.Art] || 0;
+                html += `<td>${count}</td>`;
+            });
+            html += "</tr>";
+
+            html += "</tbody></table>";
+            return html;
+        }
+
+        function redigerbartFält(label, fält, art) {
+            const värde = art[fält] || "";
+            const id = `fält-${fält.replace(/\s+/g, "")}`;
+            const flerRaderFält = ["särdrag", "kännetecken"];
+            const rader = flerRaderFält.includes(fält.toLowerCase()) ? 2 : 1;
+
+            return `
+                <label for="${id}"><strong>${label}:</strong></label><br>
+                <textarea id="${id}" class="redigerbart-fält" data-fält="${fält}" rows="${rader}" oninput="uppdateraFält(this, '${art.Art}')">${värde}</textarea>
+            `;
+        }
+
+
+        function uppdateraFält(textarea, artNamn) {
+            const fält = textarea.dataset.fält;
+            const nyText = textarea.value;
+
+            const art = artdata.find(a => a.Art === artNamn);
+            if (art) {
+                art[fält] = nyText;
+            }
+        }
+
+        function sparaRedigeradJson() {
+            // Gå igenom alla textarea-fält med data-fält
+            document.querySelectorAll(".redigerbart-fält").forEach(textarea => {
+                const fält = textarea.dataset.fält;
+                const artnamn = textarea.getAttribute("oninput").match(/uppdateraFält\(this, '(.+?)'\)/)[1];
+                const art = artdata.find(a => a.Art === artnamn);
+                if (art) {
+                    art[fält] = textarea.value.trim();
+                }
+            });
+
+            const blob = new Blob([JSON.stringify(artdata, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const länk = document.createElement("a");
+            länk.href = url;
+            länk.download = "redigerad_artdata.json";
+            länk.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function visaPopup(bildSrc, altText) {
+            const popup = document.getElementById("bild-popup");
+            const popupBild = document.getElementById("popup-bild");
+            popupBild.src = bildSrc;
+            popupBild.alt = altText;
+            popup.style.display = "flex";
+        }
+
+        function stängPopup() {
+            document.getElementById("bild-popup").style.display = "none";
+        }
+
+    </script>
+</body>
+</html>
