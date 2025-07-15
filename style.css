@@ -1,0 +1,316 @@
+body {
+  font-family: sans-serif;
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 1rem;
+}
+
+label {
+    display: block;
+    margin-top: 1rem;
+    font-weight: bold;
+}
+
+input, button {
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  width: 100%;
+  font-size: 1rem;
+}
+
+button {
+  cursor: pointer;
+}
+
+.art-block {
+    margin-top: -1rem;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: #FAFAFA;
+}
+
+.art-block h2 {
+    font-size: 1.3rem;
+    margin-bottom: -0.5rem;
+    color: black;   /* rubrik huvudart*/
+}
+
+.art-block h3 {
+    font-size: 1rem;
+    margin-bottom: 0.2rem;
+}
+
+.art-block h4 {
+    font-size: 1.1rem;
+    margin-top: 0rem;
+    margin-bottom: 0.2rem;
+    color: #1b3e1b;
+}
+
+.art-block strong {
+    font-size: 0.8rem;
+    color: black;
+}
+.art-block p {
+    margin-top: 0.2rem; 
+    margin-bottom: 0.4rem;
+}
+
+.förväxling {
+    margin-top: 1.5rem;
+    padding-left: 1rem;
+    border-left: 3px solid #ccc;
+}
+
+.förväxling h4 {
+    margin-top: 0.8rem;
+    margin-bottom: 0.2rem;
+    font-size: 1.3rem;
+    color: black;
+}
+
+.förväxling-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.förväxling-info {
+    flex: 1;
+}
+
+.förväxling-bild {
+    flex-shrink: 0;
+}
+
+.förväxlingsbild {
+    width: 180px;
+    height: auto;
+    border-radius: 4px;
+    object-fit: cover;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.sökrad-autocomplete {
+    position: relative;
+    margin-bottom: 1rem;
+}
+                       
+#förslaglista {
+    position: absolute;
+    background: #FAFAFA;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    margin-top: 0px;
+    width: 20%;
+    z-index: 10;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    font-size: 1rem;
+}
+
+#förslaglista:empty {
+    border: none;
+    box-shadow: none;
+}
+
+.förslag-item {
+    padding: 0.4rem;
+    cursor: pointer;
+}
+
+
+
+.förslag-item:hover {
+    background-color: #eef;
+}
+
+.filterrad {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    align-items: flex-start;
+}
+
+.filterrad select {
+    font-size: 1rem;
+    padding: 0.5rem;
+    width: 100%;
+}
+
+.observation-info {
+    font-size: 0.9rem;
+    color: #555;
+    margin-left: 1rem;
+}
+
+.jämförelsetabell {
+    border-collapse: collapse;
+    margin-top: 1rem;
+    width: 100%;
+    font-size: 0.95rem;
+}
+
+.jämförelsetabell th,
+.jämförelsetabell td {
+    border: 1px solid #ccc;
+    padding: 0.5rem;
+    text-align: left;
+}
+
+.jämförelsetabell thead {
+    background-color: #FAFAFA;
+}
+
+.redigerbart-fält {
+    width: 97%;
+    font-size: 1rem;
+    font-family: inherit; 
+    line-height: 1.3; 
+    padding: 0.4rem;
+    margin-bottom: -0.5rem;
+    margin-top: -1rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    resize: vertical;
+    background-color: #FAFAFA;
+}
+
+.redigerbart-fält:focus {
+    outline: none;
+    border-color: #4caf50;
+    background-color: #FAFAFA;
+}
+
+.spara-knapp-container {
+    text-align: right;
+    margin-top: 1rem;
+    margin-bottom: -1.5rem;
+}
+
+.spara-knapp {
+    background-color: FAFAFA; 
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    width: 5rem;
+}
+
+.spara-knapp:hover {
+    background-color: #1b5e20;
+}
+
+.art-flexbox {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.art-fälten {
+    flex: 1;
+}
+
+.art-bilder-vertikal {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 180px;
+    height: auto;
+    border-radius: 4px;
+    object-fit: cover;
+    border: 1px solid #999;
+    box-shadow: 0 1px 3px rgba(0,0,0,1);
+    
+}
+
+.popup-overlay {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.8);
+    justify-content: center;
+    align-items: center;
+    cursor: zoom-out;
+}
+
+.popup-bild {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+}
+
+.flexcontainer {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    align-items: flex-start;
+    flex-wrap: wrap; 
+}
+
+.sambandslista {
+    width: 320px;
+    flex-shrink: 0;
+}
+
+#grafContainer {
+    flex: 1;
+    min-width: 300px;
+    max-width: 100%;
+    height: 500px;
+    border: 1px solid #ccc;
+}
+
+.sambandsrad {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.sambandsrad textarea {
+    flex: 1 1 60%;
+    min-width: 300px;
+    font-size: 1rem;
+    padding: 0.5rem;
+}
+
+.sambandsrad button {
+    height: 2.6rem;
+    width: 2.6rem;
+    padding: 0;
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+    border: 1px solid #888;
+    border-radius: 4px;
+    background-color: #f0f0f0;
+    transition: background-color 0.2s;
+}
+
+.sambandsrad button:hover {
+    background-color: #e0e0e0;
+}
+
+#viktslider-container {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+#viktslider {
+    width: 200px;
+    vertical-align: middle;
+    
+}
+
