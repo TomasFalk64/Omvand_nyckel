@@ -184,7 +184,7 @@
             // Generera bilder (max 2)
             let bilderHtml = "";
             for (let i = 1; i <= 2; i++) {
-                const bildPath = `bilder_webp/${encodeURIComponent(art.Art)}_${i}.webp`;
+                const bildPath = `Bilder_webp/${encodeURIComponent(art.Art)}_${i}.webp`;
                 bilderHtml += `<img src="${bildPath}" alt="${art.Art}" class="förväxlingsbild"
                     onclick="visaPopup('${bildPath}', '${art.Art}')" 
                     onerror="this.style.display='none'">`;
@@ -222,7 +222,7 @@
                     const namnSanerat = namn.trim().toLowerCase();
                     const f = artdata.find(a => a.Art?.trim().toLowerCase() === namnSanerat);
                     if (f) {
-                        const bildPath = `bilder/${f.Art}_1.webp`;
+                        const bildPath = `Bilder_webp/${f.Art}_1.webp`;
                         html += `
                             <div class="förväxling">
                                 <div class="förväxling-flex">
